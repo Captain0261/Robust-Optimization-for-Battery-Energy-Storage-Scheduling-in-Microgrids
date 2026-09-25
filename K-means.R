@@ -4,8 +4,9 @@ library(ggplot2)
 library(cluster)
 library(lubridate)
 
-pv_data <- read.csv("E:/桌面/MORSE/Dissertation/data/Gitcode/ninja_pv_52.4949_-1.8518_corrected.csv", skip=3)
-wind_data <- read.csv("E:/桌面/MORSE/Dissertation/data/Gitcode/ninja_wind_52.4949_-1.8518_corrected.csv", skip=3)
+# read the pv and wind generation data
+pv_data <- read.csv("ninja_pv_52.4949_-1.8518_corrected.csv", skip=3)
+wind_data <- read.csv("ninja_wind_52.4949_-1.8518_corrected.csv", skip=3)
 
 re <- pv_data %>% select(time, PV = electricity) %>%
   inner_join(wind_data %>% select(time, Wind = electricity), by = 'time')
@@ -34,7 +35,7 @@ cluster_data <- re_wide %>% select(-Date)
 cluster_data <- scale(cluster_data)
 cluster_data[is.nan(cluster_data)] <- 0
 
-
+# divide the whole data into four clusters
 set.seed(2025)
 k <- 4
 km <- kmeans(cluster_data, centers = k, nstart = 25)
@@ -50,15 +51,13 @@ robust_parameters <- re %>% group_by(Cluster, Hour) %>% summarise(
     .groups = "drop"
   )
 
+# draw the real PV generation
 plot_data_PV <- robust_parameters %>%
   mutate(
     Hour = as.numeric(Hour),
     PV_upper = P_bar_PV + Delta_P_PV,
     PV_lower = pmax(0, P_bar_PV - Delta_P_PV)
   )
-
-
-# draw the real PV generation
 ggplot(plot_data_PV, aes(x = Hour)) +
   geom_ribbon(aes(ymin = PV_lower, ymax = PV_upper, fill = Cluster), alpha = 0.3) +
   geom_line(aes(y = P_bar_PV, color = Cluster), size = 1) +
@@ -70,15 +69,13 @@ ggplot(plot_data_PV, aes(x = Hour)) +
   theme_minimal() +
   theme(legend.position = "none")
 
+# draw the real wind generation
 plot_data_Wind <- robust_parameters %>%
   mutate(
     Hour = as.numeric(Hour),
     Wind_upper = P_bar_Wind + Delta_P_Wind,
     Wind_lower = pmax(0, P_bar_Wind - Delta_P_Wind)
   )
-
-
-# draw the real wind generation
 ggplot(plot_data_Wind, aes(x = Hour)) +
   geom_ribbon(aes(ymin = Wind_lower, ymax = Wind_upper, fill = Cluster), alpha = 0.3) +
   geom_line(aes(y = P_bar_Wind, color = Cluster),size = 1) +
@@ -90,8 +87,6 @@ ggplot(plot_data_Wind, aes(x = Hour)) +
   theme_minimal() +
   theme(legend.position = "none")
 
-
-
 robust_parameters <- robust_parameters %>%
   pivot_wider(
     names_from = Cluster,
@@ -100,13 +95,12 @@ robust_parameters <- robust_parameters %>%
   ) %>%
   arrange(Hour)
 
+# output the parameters will be used in robust model
 # write.csv(robust_parameters, "Robust_Parameters.csv", row.names = FALSE)
 # write.csv(re_wide %>% select(Date, Cluster), "Daily_Cluster.csv", row.names = FALSE)
 
 
-
-
-
+# draw the uncertainty set of PV generation
 ggplot(re, aes(x = as.numeric(Hour), y = 350 * PV, group = Date, color = Cluster)) +
   geom_line(alpha = 0.25) +
   facet_wrap(~ Cluster, labeller = labeller(Cluster = function(x) paste0("Cluster ", x))) +
@@ -117,8 +111,7 @@ ggplot(re, aes(x = as.numeric(Hour), y = 350 * PV, group = Date, color = Cluster
   theme_minimal() +
   theme(legend.position = "none")
 
-
-
+# draw the uncertainty set of wind generation
 ggplot(re, aes(x = as.numeric(Hour), y = 75 * Wind, group = Date, color = Cluster)) +
   geom_line(alpha = 0.25) +
   facet_wrap(~ Cluster, labeller = labeller(Cluster = function(x) paste0("Cluster ", x))) +
@@ -129,15 +122,13 @@ ggplot(re, aes(x = as.numeric(Hour), y = 75 * Wind, group = Date, color = Cluste
   theme_minimal() +
   theme(legend.position = "none")
 
-
+# draw the calander
 re_wide <- re_wide %>%
   mutate(
     Month = month(Date, label = TRUE, abbr = TRUE, locale = "C"),
     Day = day(Date)
   )
 
-
-# draw the calander
 ggplot(re_wide, aes(x = Day, y = Month, fill = Cluster)) +
   geom_tile(color = "black") +
   labs(
