@@ -37,5 +37,9 @@ To accurately capture the real-world volatility of renewable energy, this projec
 ```
 
 ## Column and Constraints Generation
+![C&CG flowchart](./CCG_flowchart.jpg)
+
+
+![C&CG convergence](./CCG_Detailed_Convergence.jpg)
 
 ## Monte Carlo Simulation Experiments
